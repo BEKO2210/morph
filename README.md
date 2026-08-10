@@ -5,7 +5,7 @@
 <br/>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](morph_system/LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.1-informational.svg)](morph_system/VERSION)
+[![Version](https://img.shields.io/badge/version-0.1.2-informational.svg)](morph_system/VERSION)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#requirements)
 [![Architecture](https://img.shields.io/badge/architecture-one--shot%2C%20no%20daemon-success.svg)](#what-a-run-actually-does)
 [![Dependencies](https://img.shields.io/badge/python%20deps-zero-success.svg)](#requirements)
@@ -112,8 +112,11 @@ Every run is a single pass through this graph — no daemon, no persistent proce
 | `--commit` | Apply + local commit. Only the winner's own changed files are staged — never MORPH's install files or unrelated ignored artifacts. |
 | `--push` | Apply + commit + push. The only mode that touches the remote. |
 | `--keep-worktrees` | Debug only — skips apoptosis cleanup. |
+| `--verbose` / `-v` | Also echo raw agent/check output live on stderr, not just `[MORPH] ...` progress lines. |
 
 `./morph-once doctor` checks prerequisites instead of running a lifecycle.
+
+Every run streams `[MORPH] ...` progress (sensing, hypothesis generation, Builder start/done, each check command, Predator/Guardian start/done, cleanup) to **stderr** and `run_dir/progress.log` as it happens — stdout is reserved for the final JSON result so scripts/CI can pipe it straight into `jq` or similar.
 
 MORPH refuses to apply/commit/push onto a dirty base working tree, so a selected repair is never mixed with unrelated local changes.
 
@@ -145,12 +148,14 @@ A winner is only ever applied if **all** of these hold — a failing test hard-b
 
 If `test_commands` is left empty, MORPH auto-detects common Node, Python, Go, Rust, Maven, and Gradle checks. Fitness weighs execution results, adversarial (Predator) review, Guardian review, minimality, blast radius, dependency stability, and task signal — see `homeostasis` in `morph.yaml` to tune the balance.
 
+Resilience knobs (with defaults): `agent_max_retries` (2) and `agent_retry_backoff_s` (5.0) bound how often a **transient** transport error (dropped websocket, connection reset, 5xx) during an agent call is retried with exponential backoff — normal agent/task failures are never retried. `progress_heartbeat_s` (20) controls how often a silent, still-running agent call prints a heartbeat.
+
 ## Adapters
 
 | Adapter | Backing CLI | Builder sandbox | Predator / Guardian |
 |---|---|---|---|
 | `claude` | `claude -p` (non-interactive, no session persistence) | file read/edit tools only | read-only |
-| `codex` | `codex exec` | `workspace-write` | `read-only`, non-interactive approval |
+| `codex` | `codex --ask-for-approval never exec --ephemeral` | `workspace-write` | `read-only`, non-interactive approval |
 | `mock` | none (built-in) | in-process | in-process — used for smoke-testing MORPH itself |
 | `auto` | detects `claude`, then falls back to `codex` | — | — |
 
@@ -161,14 +166,18 @@ Each invocation writes a complete, inspectable trail:
 ```text
 .morph/runs/<run-id>/
 ├── sensing.json
-├── g0-candidate-1.json / .patch
-├── g0-candidate-2.json / .patch
-├── g0-candidate-3.json / .patch
-├── g1-candidate-1.json / .patch
-├── g1-candidate-2.json / .patch
-├── g1-candidate-3.json / .patch
+├── progress.log                          # every "[MORPH] ..." line from this run
+├── hypotheses.log                        # raw hypothesis-generation agent output
+├── g0-candidate-1.json                   # journaled atomically per phase — never only written at the end
+├── g0-candidate-1.patch
+├── g0-candidate-1.builder.log
+├── g0-candidate-1.checks.json
+├── g0-candidate-1.predator.log
+├── g0-candidate-1.guardian.log
+├── g0-candidate-2.* / g0-candidate-3.* / g1-candidate-*.* (same shape)
 ├── winner.patch
-└── result.json
+├── result.json                           # written on every controlled exit path, including failures
+└── error.json                            # present only if the run hit an unexpected exception
 
 .morph/memory/
 ├── antibodies.json   # immune memory
@@ -176,7 +185,9 @@ Each invocation writes a complete, inspectable trail:
 └── trust.json        # hysteretic trust
 ```
 
-Both directories are gitignored by default (see `.gitignore`).
+Each `g*-candidate-N.json` is updated after worktree creation, after the Builder finishes, after each check command, and after each review — so a crash mid-run (network drop, killed process) still leaves whatever phases completed on disk instead of losing the candidate entirely. A Builder call that produces an empty diff is journaled as `"status": "builder-no-change"` and is excluded from review and fitness-based selection rather than being scored like a normal candidate. A persistently broken Predator/Guardian review (retries exhausted) degrades that candidate to maximum severity with a traceable finding instead of aborting the whole run.
+
+Both `.morph/` and `.morph-worktrees/` are gitignored by default (see `.gitignore`).
 
 ## Repository layout
 
@@ -217,16 +228,26 @@ sha256sum -c CHECKSUMS.txt
 
 Vendor release checksum (v0.1.1 ZIP as shipped): `ae967daca0518ddddf0be7c033c8a51c41d6c5e00356340c2f21ec82c8ecf912`
 
-> **Local fix on top of the vendor release:** the shipped `claude` adapter builds `claude -p --tools <list> <prompt>`. Against the real `claude` CLI, `--tools` is variadic and greedily consumes the next argv token — including the prompt — leaving `claude -p` with no prompt at all. Verified live against the actual `claude` binary in this environment and fixed in [`morph_system/morph/adapters/claude.py`](morph_system/morph/adapters/claude.py) by inserting an explicit `--` before the prompt, with a regression test in [`morph_system/tests/test_claude_adapter.py`](morph_system/tests/test_claude_adapter.py). Because `CHECKSUMS.txt` documents the vendor's original release, `claude.py` and the new test file no longer match their listed hashes — that mismatch is this fix, not corruption.
+> **Local fixes on top of the vendor release** (`CHECKSUMS.txt` documents the vendor's original v0.1.1 release; several files below intentionally no longer match their listed hashes because of these fixes, not corruption):
+>
+> 1. The `claude` adapter built `claude -p --tools <list> <prompt>`. Against the real `claude` CLI, `--tools` is variadic and greedily consumes the next argv token — including the prompt — leaving `claude -p` with no prompt at all. Verified live against the actual `claude` binary. Fixed in [`morph_system/morph/adapters/claude.py`](morph_system/morph/adapters/claude.py) with an explicit `--` before the prompt.
+> 2. The `codex` adapter built `codex exec --ask-for-approval never ...`, but `--ask-for-approval` is a **global** codex option (codex ≥ 0.147 rejects it after `exec` with `unexpected argument '--ask-for-approval' found`). Found in a real run against an external target repo with codex 0.147.0. Fixed in [`morph_system/morph/adapters/codex.py`](morph_system/morph/adapters/codex.py) by moving it before `exec`.
+> 3. `subprocess.run(capture_output=True)` buffered all agent/check output until process exit — a run could sit silent for minutes with no visible phase, candidate, or heartbeat. Fixed with `util.run_streamed`/`util.run_agent`: real-time output teed to a log file plus periodic heartbeats, and `[MORPH] ...` progress lines on stderr for every phase (stdout stays pure JSON).
+> 4. A transient network error (dropped websocket, connection reset, 5xx) during a single Predator/Guardian call aborted the *entire* run, discarding already-completed Builder/test work. Fixed with bounded retry-with-backoff for clearly transient transport errors only (`util.is_transient_error`), plus graceful per-candidate degradation (`_safe_review`) if a review still fails after retries — the candidate is scored maximally severe and excluded, not the whole run crashed.
+> 5. Candidate artifacts were only written after Builder + Checks + Predator + Guardian *all* finished, so a mid-run crash left only `sensing.json`. Fixed: `orchestrator._evaluate` now journals each candidate atomically per phase, and `result.json` (status `run-failed`) + `error.json` (with traceback) are now written on every controlled exit path, including unexpected exceptions, before worktree cleanup runs.
+> 6. An empty Builder diff was silently reviewed and fitness-scored like a normal candidate. Fixed: it's now journaled as an explicit `"status": "builder-no-change"` and excluded from review and winner/parent selection.
+> 7. `sensing.json`'s `git_clean` could read `0.0` (dirty) even when only MORPH's own untracked artifacts (`.morph/`, `morph.yaml`, ...) were present — `homeostasis.sense()` now filters `git status --porcelain` through the same `ignore_paths` the apply-safety check already used.
+>
+> Issues 2–7 were found via a real end-to-end MORPH run against an external target repository (codex 0.147.0); issue 1 against this environment's real `claude` CLI. 12 new regression tests cover all of them — 17 tests total (`pytest morph_system/tests`, `bash morph_system/run-tests.sh`).
 
 **End-to-end verification performed in this repo:**
-- All 5 bundled tests pass (`pytest morph_system/tests`, `bash morph_system/run-tests.sh`).
+- All 17 tests pass.
 - `./morph-once doctor` — correct JSON, exit 0.
 - Full mock-adapter lifecycle (`--adapter mock`) — winner selected, all gates `true`, no residue after apoptosis.
 - Hard safety gate — a deliberately failing test command produced `checks_ok: false`, `status: no-winner-verification-failed`, `applied: false`, exit code 3.
 - **Real `claude -p` adapter**, live against this environment's actual `claude` CLI (reduced to a single clone to limit cost) — Builder wrote a real patch, Predator/Guardian produced real adversarial/compatibility review findings, gates all `true`, base working tree untouched (no `--apply`).
-- `.morph-worktrees/` fully removed after every run — no empty leftover directories.
-- `codex` was **not** available in this environment (no authenticated CLI installed), so the Codex adapter and `--ephemeral` flag are verified by code review against the adapter contract only, not a live run.
+- `.morph-worktrees/` fully removed after every run — no empty leftover directories, including on the exception path.
+- `codex` was **not** available in this environment (no authenticated CLI installed), so the `codex` arg-order fix is verified by code review against the reported error plus a regression test, not a live codex run.
 
 ## Scope of v0.1
 

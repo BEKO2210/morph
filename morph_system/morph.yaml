@@ -51,5 +51,8 @@
   },
   "require_all_checks_pass": true,
   "max_predator_severity": 0.65,
-  "max_guardian_severity": 0.65
+  "max_guardian_severity": 0.65,
+  "agent_max_retries": 2,
+  "agent_retry_backoff_s": 5.0,
+  "progress_heartbeat_s": 20
 }
