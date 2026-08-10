@@ -38,6 +38,18 @@ Or auto-detect:
 bash morph_system/install.sh && ./morph-once --adapter auto --apply "Implement feature X"
 ```
 
+Check the local prerequisites after installation:
+
+```bash
+./morph-once doctor
+```
+
+Run MORPH's packaged regression tests:
+
+```bash
+bash morph_system/run-tests.sh
+```
+
 ## Modes
 
 - No flag: run, select winner, export patch/report, **do not alter base tree**.
@@ -45,6 +57,8 @@ bash morph_system/install.sh && ./morph-once --adapter auto --apply "Implement f
 - `--commit`: apply + local commit.
 - `--push`: apply + commit + push. This is the only mode that touches the remote.
 - `--keep-worktrees`: debugging only; skip apoptosis cleanup.
+
+A candidate is never applied when an executed verification command fails (unless `require_all_checks_pass` is explicitly disabled). Predator and Guardian severity also act as hard selection gates in addition to the weighted fitness score.
 
 MORPH requires a clean base working tree for apply/commit/push. That is deliberate: it avoids mixing a selected repair with unrelated local changes.
 
@@ -58,6 +72,9 @@ Useful fields:
 {
   "clones": 3,
   "fitness_threshold": 0.45,
+  "require_all_checks_pass": true,
+  "max_predator_severity": 0.65,
+  "max_guardian_severity": 0.65,
   "test_commands": ["npm test"],
   "predator_commands": ["npm run fuzz", "npm run test:integration"]
 }
@@ -100,4 +117,4 @@ Persistent local learning:
 
 ## Important scope of v0.1
 
-This is an executable research-grade foundation, not a claim that every biological metaphor is already a learned model. The current stress field is a lightweight static graph, predictive CI is represented by risk-weighted verification hooks rather than a trained predictor, and clonal evolution currently occurs across causal hypotheses rather than repeated mutation generations. The architecture is intentionally modular so those can be upgraded without changing the one-shot CLI contract.
+This is an executable research-grade foundation, not a claim that every biological metaphor is already a learned model. The current stress field is a lightweight static graph, predictive CI is represented by risk-weighted verification hooks rather than a trained predictor, and clonal evolution currently uses one configurable mutation generation after the causal seed population rather than an unbounded evolutionary loop. The architecture is intentionally modular so those can be upgraded without changing the one-shot CLI contract.

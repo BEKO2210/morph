@@ -16,6 +16,9 @@ class MorphConfig:
     max_diff_lines: int = 2200
     fitness_threshold: float = 0.45
     require_clean_for_apply: bool = True
+    require_all_checks_pass: bool = True
+    max_predator_severity: float = 0.65
+    max_guardian_severity: float = 0.65
     test_commands: list[str] = field(default_factory=list)
     predator_commands: list[str] = field(default_factory=list)
     ignore_paths: list[str] = field(default_factory=lambda: [".morph/", ".morph-worktrees/", "morph_system/", "morph-once", "morph.yaml", "START-MORPH.txt", "CHECKSUMS.txt", ".gitignore.example", "node_modules/", ".venv/"])

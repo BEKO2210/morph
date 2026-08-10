@@ -18,7 +18,7 @@ class CodexAdapter(AgentAdapter):
 
     def _run(self, cwd: Path, prompt: str, write: bool) -> str:
         sandbox = str(self.cfg.get("sandbox", "workspace-write")) if write else "read-only"
-        cmd = ["codex", "exec", "--sandbox", sandbox, "--ask-for-approval", "never", prompt]
+        cmd = ["codex", "exec", "--ephemeral", "--sandbox", sandbox, "--ask-for-approval", "never", prompt]
         r = run_cmd(cmd, cwd=cwd, timeout=self.timeout)
         if r.returncode != 0:
             raise RuntimeError(f"Codex failed: {r.stderr.strip() or r.stdout.strip()}")

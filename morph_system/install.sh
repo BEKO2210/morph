@@ -10,7 +10,12 @@ cat > "$REPO/morph-once" <<'WRAP'
 set -euo pipefail
 REPO="$(pwd)"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/morph_system" && pwd)"
-PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}" python3 -m morph run --repo "$REPO" "$@"
+if [[ "${1:-}" == "doctor" ]]; then
+  shift
+  PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}" python3 -m morph doctor --repo "$REPO" "$@"
+else
+  PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}" python3 -m morph run --repo "$REPO" "$@"
+fi
 WRAP
 chmod +x "$REPO/morph-once"
 if [[ ! -f "$REPO/morph.yaml" ]]; then

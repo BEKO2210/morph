@@ -9,23 +9,47 @@
   "require_clean_for_apply": true,
   "test_commands": [],
   "predator_commands": [],
-  "ignore_paths": [".morph/", ".morph-worktrees/", "morph_system/", "morph-once", "morph.yaml", "START-MORPH.txt", "CHECKSUMS.txt", ".gitignore.example", "node_modules/", ".venv/"],
+  "ignore_paths": [
+    ".morph/",
+    ".morph-worktrees/",
+    "morph_system/",
+    "morph-once",
+    "morph.yaml",
+    "START-MORPH.txt",
+    "CHECKSUMS.txt",
+    ".gitignore.example",
+    "node_modules/",
+    ".venv/"
+  ],
   "homeostasis": {
     "tests": 0.32,
     "predator": 0.14,
     "guardian": 0.15,
     "minimality": 0.14,
-    "dependency_stability": 0.10,
+    "dependency_stability": 0.1,
     "blast_radius": 0.08,
     "task_signal": 0.07
   },
   "claude": {
     "model": "sonnet",
     "max_turns": 18,
-    "builder_allowed_tools": ["Read", "Edit", "Write", "Glob", "Grep"],
-    "review_allowed_tools": ["Read", "Glob", "Grep"]
+    "builder_allowed_tools": [
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep"
+    ],
+    "review_allowed_tools": [
+      "Read",
+      "Glob",
+      "Grep"
+    ]
   },
   "codex": {
     "sandbox": "workspace-write"
-  }
+  },
+  "require_all_checks_pass": true,
+  "max_predator_severity": 0.65,
+  "max_guardian_severity": 0.65
 }

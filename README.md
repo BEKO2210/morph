@@ -5,7 +5,7 @@
 <br/>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](morph_system/LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-informational.svg)](morph_system/VERSION)
+[![Version](https://img.shields.io/badge/version-0.1.1-informational.svg)](morph_system/VERSION)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#requirements)
 [![Architecture](https://img.shields.io/badge/architecture-one--shot%2C%20no%20daemon-success.svg)](#what-a-run-actually-does)
 [![Dependencies](https://img.shields.io/badge/python%20deps-zero-success.svg)](#requirements)
@@ -20,6 +20,7 @@ MORPH is a one-shot, multi-agent coding harness for Claude Code and Codex. It do
 
 ## Table of contents
 
+- [Requirements](#requirements)
 - [Quick start](#quick-start)
 - [What a run actually does](#what-a-run-actually-does)
 - [CLI modes](#cli-modes)
@@ -32,27 +33,45 @@ MORPH is a one-shot, multi-agent coding harness for Claude Code and Codex. It do
 - [Scope of v0.1](#scope-of-v01)
 - [License](#license)
 
+## Requirements
+
+- Python 3.9+ (standard library only — MORPH itself has zero Python dependencies)
+- `git` with worktree support
+- One of: [Claude Code](https://claude.com/claude-code) (`claude` on `PATH`, logged in) or [Codex](https://openai.com/codex/) (`codex` on `PATH`, logged in) — or neither, to use `--adapter mock` for dry-running MORPH itself
+
 ## Quick start
 
-Extract this repository's contents into the root of the target git repo (already done here), then:
+Extract this repository's contents into the root of the target git repo (already done here), then install:
 
 ```bash
-bash morph_system/install.sh && ./morph-once --adapter claude --apply "YOUR TASK HERE"
+bash morph_system/install.sh
+```
+
+Check prerequisites (git, Python, and whether `claude`/`codex` are on `PATH`):
+
+```bash
+./morph-once doctor
+```
+
+Then run a real one-shot lifecycle:
+
+```bash
+./morph-once --adapter claude --apply "YOUR TASK HERE"
 ```
 
 Codex instead of Claude Code:
 
 ```bash
-bash morph_system/install.sh && ./morph-once --adapter codex --apply "YOUR TASK HERE"
+./morph-once --adapter codex --apply "YOUR TASK HERE"
 ```
 
 Auto-detect Claude Code, falling back to Codex:
 
 ```bash
-bash morph_system/install.sh && ./morph-once --adapter auto --apply "YOUR TASK HERE"
+./morph-once --adapter auto --apply "YOUR TASK HERE"
 ```
 
-Claude Code is driven through its non-interactive `claude -p` print mode; Codex is driven through `codex exec` with `workspace-write` / `read-only` sandboxing. See [`morph_system/README.md`](morph_system/README.md) for the full adapter reference.
+Claude Code is driven through its non-interactive `claude -p` print mode; Codex is driven through `codex exec --ephemeral` with `workspace-write` / `read-only` sandboxing. See [`morph_system/README.md`](morph_system/README.md) for the full adapter reference.
 
 ## What a run actually does
 
@@ -90,11 +109,26 @@ Every run is a single pass through this graph — no daemon, no persistent proce
 |---|---|
 | *(none)* | Run, select a winner, write patch + report. **Base working tree is never touched.** |
 | `--apply` | Apply the winner to the base tree, leave it uncommitted. Recommended for getting started. |
-| `--commit` | Apply + local commit. |
+| `--commit` | Apply + local commit. Only the winner's own changed files are staged — never MORPH's install files or unrelated ignored artifacts. |
 | `--push` | Apply + commit + push. The only mode that touches the remote. |
 | `--keep-worktrees` | Debug only — skips apoptosis cleanup. |
 
+`./morph-once doctor` checks prerequisites instead of running a lifecycle.
+
 MORPH refuses to apply/commit/push onto a dirty base working tree, so a selected repair is never mixed with unrelated local changes.
+
+### Selection gates
+
+A winner is only ever applied if **all** of these hold — a failing test hard-blocks apply/commit/push even if the fitness score alone would have passed:
+
+| Gate | Meaning |
+|---|---|
+| `fitness_ok` | Weighted score ≥ `fitness_threshold`. |
+| `checks_ok` | Every executed test/lint/build command passed (`require_all_checks_pass`). |
+| `predator_ok` | Adversarial-review severity ≤ `max_predator_severity`. |
+| `guardian_ok` | Compatibility/minimality-review severity ≤ `max_guardian_severity`. |
+
+`result.json` reports each gate individually under `selection_gates`, plus `checks_executed`.
 
 ## Configuration
 
@@ -181,7 +215,18 @@ Full details in [`morph_system/SECURITY.md`](morph_system/SECURITY.md). Treat an
 sha256sum -c CHECKSUMS.txt
 ```
 
-Release checksum: `ff1ba5ac82b6cb25cc4de26c523fff5d5011b8e0bf52f0d1895e2390bb6fae7d`
+Vendor release checksum (v0.1.1 ZIP as shipped): `ae967daca0518ddddf0be7c033c8a51c41d6c5e00356340c2f21ec82c8ecf912`
+
+> **Local fix on top of the vendor release:** the shipped `claude` adapter builds `claude -p --tools <list> <prompt>`. Against the real `claude` CLI, `--tools` is variadic and greedily consumes the next argv token — including the prompt — leaving `claude -p` with no prompt at all. Verified live against the actual `claude` binary in this environment and fixed in [`morph_system/morph/adapters/claude.py`](morph_system/morph/adapters/claude.py) by inserting an explicit `--` before the prompt, with a regression test in [`morph_system/tests/test_claude_adapter.py`](morph_system/tests/test_claude_adapter.py). Because `CHECKSUMS.txt` documents the vendor's original release, `claude.py` and the new test file no longer match their listed hashes — that mismatch is this fix, not corruption.
+
+**End-to-end verification performed in this repo:**
+- All 5 bundled tests pass (`pytest morph_system/tests`, `bash morph_system/run-tests.sh`).
+- `./morph-once doctor` — correct JSON, exit 0.
+- Full mock-adapter lifecycle (`--adapter mock`) — winner selected, all gates `true`, no residue after apoptosis.
+- Hard safety gate — a deliberately failing test command produced `checks_ok: false`, `status: no-winner-verification-failed`, `applied: false`, exit code 3.
+- **Real `claude -p` adapter**, live against this environment's actual `claude` CLI (reduced to a single clone to limit cost) — Builder wrote a real patch, Predator/Guardian produced real adversarial/compatibility review findings, gates all `true`, base working tree untouched (no `--apply`).
+- `.morph-worktrees/` fully removed after every run — no empty leftover directories.
+- `codex` was **not** available in this environment (no authenticated CLI installed), so the Codex adapter and `--ephemeral` flag are verified by code review against the adapter contract only, not a live run.
 
 ## Scope of v0.1
 

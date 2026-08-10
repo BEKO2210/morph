@@ -191,7 +191,23 @@ def run_once(repo: Path, task: str, adapter_name: str, cfg: MorphConfig, *, appl
         winner = candidates[0] if candidates else None
         if not winner:
             raise RuntimeError("No candidates were produced.")
-        status = "winner-selected" if winner.fitness.score >= cfg.fitness_threshold else "no-winner-below-threshold"
+        fitness_ok = winner.fitness.score >= cfg.fitness_threshold
+        checks_ok = (not cfg.require_all_checks_pass) or (not winner.tests) or all(t.passed for t in winner.tests)
+        predator_ok = winner.predator.severity <= cfg.max_predator_severity
+        guardian_ok = winner.guardian.severity <= cfg.max_guardian_severity
+        selection_gates = {
+            "fitness_ok": fitness_ok,
+            "checks_ok": checks_ok,
+            "predator_ok": predator_ok,
+            "guardian_ok": guardian_ok,
+            "checks_executed": len(winner.tests),
+        }
+        if fitness_ok and checks_ok and predator_ok and guardian_ok:
+            status = "winner-selected"
+        elif not fitness_ok:
+            status = "no-winner-below-threshold"
+        else:
+            status = "no-winner-verification-failed"
 
         winner_patch = run_dir / "winner.patch"
         winner_patch.write_text(winner.patch, encoding="utf-8")
@@ -206,7 +222,10 @@ def run_once(repo: Path, task: str, adapter_name: str, cfg: MorphConfig, *, appl
                 raise RuntimeError(f"Winner selected but patch could not be applied: {r.stderr}")
             applied = True
             if commit:
-                run_cmd(["git", "add", "-A"], cwd=repo, check=True)
+                # Commit only the selected patch, never MORPH's own untracked
+                # installation files or unrelated ignored local artifacts.
+                if winner.changed_files:
+                    run_cmd(["git", "add", "-A", "--", *winner.changed_files], cwd=repo, check=True)
                 run_cmd(["git", "-c", "user.name=MORPH", "-c", "user.email=morph@local", "commit", "-m", f"morph: {task[:72]}"], cwd=repo, check=True)
                 committed = True
                 if push:
@@ -243,6 +262,7 @@ def run_once(repo: Path, task: str, adapter_name: str, cfg: MorphConfig, *, appl
             "applied": applied,
             "committed": committed,
             "pushed": pushed,
+            "selection_gates": selection_gates,
             "run_dir": str(run_dir.relative_to(repo)),
         }
         json_dump(run_dir / "result.json", result)

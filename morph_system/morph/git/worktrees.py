@@ -52,3 +52,9 @@ class WorktreeManager:
         for wt in reversed(self.created):
             self.cleanup_one(wt)
         run_cmd(["git", "worktree", "prune"], cwd=self.repo)
+        # Apoptosis should leave no empty per-run clone directory behind.
+        for path in (self.root, self.root.parent):
+            try:
+                path.rmdir()
+            except OSError:
+                pass

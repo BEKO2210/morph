@@ -26,7 +26,10 @@ class ClaudeAdapter(AgentAdapter):
         ]
         if tools:
             cmd += ["--tools", ",".join(tools)]
-        cmd.append(prompt)
+        # claude's --tools flag is variadic and greedily consumes the next
+        # argv token; without an explicit end-of-options marker it swallows
+        # the prompt itself, leaving claude -p with no prompt at all.
+        cmd += ["--", prompt]
         r = run_cmd(cmd, cwd=cwd, timeout=self.timeout)
         if r.returncode != 0:
             raise RuntimeError(f"Claude Code failed: {r.stderr.strip() or r.stdout.strip()}")
