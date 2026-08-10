@@ -1,0 +1,4 @@
+.morph/
+.morph-worktrees/
+__pycache__/
+*.pyc

@@ -1,0 +1,29 @@
+MORPH — ONE-SHOT START
+
+1) Put/extract this ZIP into the ROOT of your Git repository.
+2) From that repository root run:
+
+   bash morph_system/install.sh && ./morph-once --adapter claude --apply "DEINE AUFGABE"
+
+Codex instead:
+
+   bash morph_system/install.sh && ./morph-once --adapter codex --apply "DEINE AUFGABE"
+
+Auto-detect Claude Code first, then Codex:
+
+   bash morph_system/install.sh && ./morph-once --adapter auto --apply "DEINE AUFGABE"
+
+MORPH runs exactly one lifecycle, writes the winning patch/report under .morph/runs/<run-id>/,
+cleans its temporary git worktrees, applies the winner if requested, then exits.
+
+Safer preview (does NOT modify your base working tree):
+
+   bash morph_system/run-once.sh --adapter auto "DEINE AUFGABE"
+
+Apply + commit (still no push):
+
+   ./morph-once --adapter auto --commit "DEINE AUFGABE"
+
+Apply + commit + push:
+
+   ./morph-once --adapter auto --push "DEINE AUFGABE"

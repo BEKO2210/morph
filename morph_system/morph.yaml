@@ -1,0 +1,31 @@
+{
+  "clones": 3,
+  "clone_evolution": 1,
+  "evolution_children": 3,
+  "timeout_seconds": 900,
+  "max_changed_files": 40,
+  "max_diff_lines": 2200,
+  "fitness_threshold": 0.45,
+  "require_clean_for_apply": true,
+  "test_commands": [],
+  "predator_commands": [],
+  "ignore_paths": [".morph/", ".morph-worktrees/", "morph_system/", "morph-once", "morph.yaml", "START-MORPH.txt", "CHECKSUMS.txt", ".gitignore.example", "node_modules/", ".venv/"],
+  "homeostasis": {
+    "tests": 0.32,
+    "predator": 0.14,
+    "guardian": 0.15,
+    "minimality": 0.14,
+    "dependency_stability": 0.10,
+    "blast_radius": 0.08,
+    "task_signal": 0.07
+  },
+  "claude": {
+    "model": "sonnet",
+    "max_turns": 18,
+    "builder_allowed_tools": ["Read", "Edit", "Write", "Glob", "Grep"],
+    "review_allowed_tools": ["Read", "Glob", "Grep"]
+  },
+  "codex": {
+    "sandbox": "workspace-write"
+  }
+}

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+REPO="$(pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/morph_system" && pwd)"
+PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}" python3 -m morph run --repo "$REPO" "$@"
