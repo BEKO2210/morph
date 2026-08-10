@@ -24,10 +24,10 @@ FALLBACK = [
 ]
 
 
-def generate(adapter: AgentAdapter, cwd, task: str, repo_summary: str, count: int) -> list[Hypothesis]:
+def generate(adapter: AgentAdapter, cwd, task: str, repo_summary: str, count: int, **agent_kwargs) -> list[Hypothesis]:
     prompt = f"""MORPH HYPOTHESES\nYou are the causal-diversity stage of a repair system.\nTask: {task}\nRepository summary:\n{repo_summary}\n\nReturn ONLY a JSON array of {count} objects with keys name and theory. Each theory must represent a materially different causal explanation or implementation strategy. Do not edit files."""
     try:
-        data = extract_json(adapter.review(cwd, prompt))
+        data = extract_json(adapter.review(cwd, prompt, **agent_kwargs))
         if isinstance(data, list):
             out = [Hypothesis(str(x.get("name", f"h{i}")), str(x.get("theory", ""))) for i, x in enumerate(data) if isinstance(x, dict)]
             if out:

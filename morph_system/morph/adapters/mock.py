@@ -6,13 +6,26 @@ from .base import AgentAdapter
 
 class MockAdapter(AgentAdapter):
     name = "mock"
+
     def available(self) -> bool:
         return True
-    def build(self, cwd: Path, prompt: str) -> str:
+
+    def _write_log(self, log_path: Path | None, text: str) -> None:
+        if log_path:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            log_path.write_text(text + "\n", encoding="utf-8")
+
+    def build(self, cwd: Path, prompt: str, **kwargs) -> str:
         marker = cwd / "MORPH_MOCK_CHANGE.txt"
         marker.write_text("mock repair candidate\n", encoding="utf-8")
-        return "Mock builder created MORPH_MOCK_CHANGE.txt"
-    def review(self, cwd: Path, prompt: str) -> str:
+        text = "Mock builder created MORPH_MOCK_CHANGE.txt"
+        self._write_log(kwargs.get("log_path"), text)
+        return text
+
+    def review(self, cwd: Path, prompt: str, **kwargs) -> str:
         if "HYPOTHESES" in prompt:
-            return '[{"name":"direct","theory":"direct implementation"},{"name":"interface","theory":"interface mismatch"},{"name":"latent","theory":"latent regression"}]'
-        return '{"severity":0.1,"confidence":0.9,"findings":[]}'
+            out = '[{"name":"direct","theory":"direct implementation"},{"name":"interface","theory":"interface mismatch"},{"name":"latent","theory":"latent regression"}]'
+        else:
+            out = '{"severity":0.1,"confidence":0.9,"findings":[]}'
+        self._write_log(kwargs.get("log_path"), out)
+        return out

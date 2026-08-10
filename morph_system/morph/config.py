@@ -19,6 +19,9 @@ class MorphConfig:
     require_all_checks_pass: bool = True
     max_predator_severity: float = 0.65
     max_guardian_severity: float = 0.65
+    agent_max_retries: int = 2
+    agent_retry_backoff_s: float = 5.0
+    progress_heartbeat_s: int = 20
     test_commands: list[str] = field(default_factory=list)
     predator_commands: list[str] = field(default_factory=list)
     ignore_paths: list[str] = field(default_factory=lambda: [".morph/", ".morph-worktrees/", "morph_system/", "morph-once", "morph.yaml", "START-MORPH.txt", "CHECKSUMS.txt", ".gitignore.example", "node_modules/", ".venv/"])

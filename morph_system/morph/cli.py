@@ -20,6 +20,7 @@ def parser() -> argparse.ArgumentParser:
     run.add_argument("--commit", action="store_true", help="apply and commit the winning patch")
     run.add_argument("--push", action="store_true", help="apply, commit and push the winning patch")
     run.add_argument("--keep-worktrees", action="store_true", help="debug: keep temporary clone worktrees")
+    run.add_argument("--verbose", "-v", action="store_true", help="also echo raw agent/check output live, not just [MORPH] progress lines")
     doctor = sub.add_parser("doctor", help="check prerequisites")
     doctor.add_argument("--repo", default=".")
     return p
@@ -51,6 +52,7 @@ def main(argv=None) -> int:
             commit=args.commit or args.push,
             push=args.push,
             keep_worktrees=args.keep_worktrees,
+            verbose=args.verbose,
         )
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0 if result["status"] == "winner-selected" else 3

@@ -19,15 +19,16 @@ class CheckResult:
         return asdict(self)
 
 
+def run_check(repo: Path, command: str, timeout: int) -> CheckResult:
+    try:
+        r = run_shell(command, cwd=repo, timeout=timeout)
+        return CheckResult(command, r.returncode == 0, r.returncode, r.duration_s, clip(r.stdout), clip(r.stderr))
+    except Exception as exc:
+        return CheckResult(command, False, 124, float(timeout), "", str(exc))
+
+
 def run_checks(repo: Path, commands: list[str], timeout: int) -> list[CheckResult]:
-    results: list[CheckResult] = []
-    for command in commands:
-        try:
-            r = run_shell(command, cwd=repo, timeout=timeout)
-            results.append(CheckResult(command, r.returncode == 0, r.returncode, r.duration_s, clip(r.stdout), clip(r.stderr)))
-        except Exception as exc:
-            results.append(CheckResult(command, False, 124, float(timeout), "", str(exc)))
-    return results
+    return [run_check(repo, command, timeout) for command in commands]
 
 
 def pass_ratio(results: list[CheckResult]) -> float:

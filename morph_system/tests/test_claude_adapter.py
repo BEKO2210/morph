@@ -12,12 +12,12 @@ class ClaudeAdapterArgs(unittest.TestCase):
         # so this asserts the built command always separates the two.
         captured = {}
 
-        def fake_run_cmd(cmd, **kwargs):
+        def fake_run_agent(cmd, **kwargs):
             captured["cmd"] = cmd
             return CmdResult(cmd, 0, "ok", "", 0.0)
 
         adapter = ClaudeAdapter({"builder_allowed_tools": ["Read", "Edit"]}, timeout=60)
-        with patch("morph.adapters.claude.run_cmd", fake_run_cmd):
+        with patch("morph.adapters.claude.run_agent", fake_run_agent):
             adapter.build(cwd=".", prompt="do the thing --tools-like-looking-prompt")
 
         cmd = captured["cmd"]

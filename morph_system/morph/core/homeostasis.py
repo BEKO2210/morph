@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, asdict
 from pathlib import Path
+from typing import Iterable
 
-from ..util import run_cmd
+from ..util import filter_ignored_status, run_cmd
 
 
 @dataclass
@@ -42,8 +43,15 @@ def _diff_lines(repo: Path, base: str | None = None) -> int:
     return total
 
 
-def sense(repo: Path, base: str | None = None) -> HomeostasisVector:
+def sense(repo: Path, base: str | None = None, ignore_paths: Iterable[str] = ()) -> HomeostasisVector:
     status = run_cmd(["git", "status", "--porcelain"], cwd=repo).stdout
+    # git diff --name-only only ever reports tracked-file changes, but
+    # `git status --porcelain` also lists untracked files — including
+    # MORPH's own install artifacts (.morph/, morph.yaml, ...) when they
+    # haven't been committed to the target repo. Filter those out the same
+    # way the apply-safety check does, so MORPH never mistakes its own
+    # untracked files for a dirty project working tree.
+    dirty = filter_ignored_status(status, ignore_paths)
     tracked = run_cmd(["git", "ls-files"], cwd=repo).stdout.splitlines()
     changed = _changed_files(repo, base)
     dep_names = {
@@ -55,7 +63,7 @@ def sense(repo: Path, base: str | None = None) -> HomeostasisVector:
     surface_tokens = ("api", "routes", "router", "schema", "migration", "public", "export", "types")
     surface = sum(any(tok in p.lower() for tok in surface_tokens) for p in changed)
     return HomeostasisVector(
-        git_clean=1.0 if not status.strip() else 0.0,
+        git_clean=1.0 if not dirty else 0.0,
         tracked_files=len(tracked),
         changed_files=len(changed),
         diff_lines=_diff_lines(repo, base),
