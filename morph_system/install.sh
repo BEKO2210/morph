@@ -30,5 +30,6 @@ if [[ -d "$REPO/.git/info" ]]; then
   grep -qxF '.morph-worktrees/' "$REPO/.git/info/exclude" 2>/dev/null || echo '.morph-worktrees/' >> "$REPO/.git/info/exclude"
   grep -qxF '.morph/' "$REPO/.git/info/exclude" 2>/dev/null || echo '.morph/' >> "$REPO/.git/info/exclude"
 fi
-echo "MORPH installed locally. One-shot command:"
-echo '  ./morph-once --adapter auto --apply "YOUR TASK"'
+echo "MORPH installed locally."
+echo
+"$REPO/morph-once" doctor || true

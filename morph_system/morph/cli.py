@@ -21,30 +21,70 @@ def parser() -> argparse.ArgumentParser:
     run.add_argument("--push", action="store_true", help="apply, commit and push the winning patch")
     run.add_argument("--keep-worktrees", action="store_true", help="debug: keep temporary clone worktrees")
     run.add_argument("--verbose", "-v", action="store_true", help="also echo raw agent/check output live, not just [MORPH] progress lines")
+    run.add_argument("--clones", type=int, metavar="N", help="override morph.yaml: number of causally-diverse first-generation clones (default 3)")
+    run.add_argument("--evolution", type=int, metavar="N", dest="clone_evolution", help="override morph.yaml: number of clonal-evolution rounds after generation 0 (0 disables evolution, default 1)")
+    run.add_argument("--evolution-children", type=int, metavar="N", help="override morph.yaml: mutation-pressure children per evolution round (default 3)")
     doctor = sub.add_parser("doctor", help="check prerequisites")
     doctor.add_argument("--repo", default=".")
+    doctor.add_argument("--json", action="store_true", help="machine-readable output for scripts/CI (default: human-readable)")
     return p
 
 
-def doctor(repo: Path) -> int:
+def doctor(repo: Path, as_json: bool = False) -> int:
     from .util import which, run_cmd
+    is_repo = run_cmd(["git", "rev-parse", "--is-inside-work-tree"], cwd=repo).returncode == 0
     data = {
         "python": sys.version.split()[0],
         "git": which("git"),
         "claude": which("claude"),
         "codex": which("codex"),
-        "is_git_repo": run_cmd(["git", "rev-parse", "--is-inside-work-tree"], cwd=repo).returncode == 0,
+        "is_git_repo": is_repo,
     }
-    print(json.dumps(data, indent=2))
-    return 0 if data["git"] and data["is_git_repo"] and (data["claude"] or data["codex"]) else 2
+    ready = bool(data["git"]) and is_repo and (bool(data["claude"]) or bool(data["codex"]))
+
+    if as_json:
+        print(json.dumps(data, indent=2))
+        return 0 if ready else 2
+
+    def line(label: str, value, hint: str = "") -> None:
+        mark = "OK " if value else "!! "
+        shown = value if isinstance(value, str) else ("yes" if value else "no")
+        print(f"  [{mark}] {label}: {shown}")
+        if not value and hint:
+            print(f"        -> {hint}")
+
+    print("MORPH doctor — checking what's needed to run a real one-shot cycle\n")
+    line("Python", data["python"])
+    line("git", data["git"], "Install git for your OS, e.g. 'sudo apt install git' (Debian/Ubuntu) or 'brew install git' (macOS).")
+    line("Inside a git repository", data["is_git_repo"], "Run this from inside your project's git repo, or pass --repo <path>.")
+    line("Claude Code (claude)", data["claude"], "npm install -g @anthropic-ai/claude-code -- then run: claude login")
+    line("Codex (codex)", data["codex"], "npm install -g @openai/codex -- then run: codex login")
+    print()
+    if not data["claude"] and not data["codex"]:
+        print("Neither Claude Code nor Codex is installed. Install at least one of the two commands above,")
+        print("or run with --adapter mock to dry-run MORPH's own pipeline without a real coding agent.")
+    elif ready:
+        print("Ready. Try:")
+        print('  ./morph-once --adapter auto --apply "describe the bug or feature you want fixed"')
+    else:
+        print("Not ready yet — fix the [!!] items above, then run './morph-once doctor' again.")
+    return 0 if ready else 2
 
 
 def main(argv=None) -> int:
     args = parser().parse_args(argv)
     repo = Path(args.repo).resolve()
     if args.cmd == "doctor":
-        return doctor(repo)
+        return doctor(repo, as_json=args.json)
     cfg = load_config(repo)
+    # CLI flags win over morph.yaml when given, so you never have to
+    # hand-edit JSON just to try a different clone/evolution count.
+    if args.clones is not None:
+        cfg.clones = args.clones
+    if args.clone_evolution is not None:
+        cfg.clone_evolution = args.clone_evolution
+    if args.evolution_children is not None:
+        cfg.evolution_children = args.evolution_children
     try:
         result = run_once(
             repo, args.task, args.adapter, cfg,

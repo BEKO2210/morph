@@ -220,7 +220,14 @@ def run_once(
 
     adapter = make_adapter(adapter_name, cfg, cfg.timeout_seconds)
     if not adapter.available():
-        raise RuntimeError(f"Adapter {adapter.name} is not available in PATH.")
+        install_hint = {
+            "claude": "npm install -g @anthropic-ai/claude-code -- then run: claude login",
+            "codex": "npm install -g @openai/codex -- then run: codex login",
+        }.get(adapter.name, "install it and make sure it's on PATH")
+        raise RuntimeError(
+            f"Adapter '{adapter.name}' is not available in PATH. {install_hint}\n"
+            f"Run './morph-once doctor' for a full check, or use --adapter mock to dry-run MORPH without a real coding agent."
+        )
 
     run_id = time.strftime("%Y%m%d-%H%M%S") + "-" + slug(task, 16)
     run_dir = repo / ".morph" / "runs" / run_id
