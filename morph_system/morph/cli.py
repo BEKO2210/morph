@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -12,7 +13,12 @@ from .colony.orchestrator import run_once
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="morph", description="MORPH — one-shot morphogenetic autonomous repair fabric")
     sub = p.add_subparsers(dest="cmd", required=True)
-    run = sub.add_parser("run", help="run one MORPH lifecycle and exit")
+    # The morph-once wrapper injects the subcommand, so its --help must not
+    # advertise "usage: morph run ..." — that invites users to type a "run"
+    # the wrapper already supplied.
+    run_prog = os.environ.get("MORPH_PROG")
+    run = sub.add_parser("run", help="run one MORPH lifecycle and exit",
+                         **({"prog": run_prog} if run_prog else {}))
     run.add_argument("task", help="coding task or repair goal")
     run.add_argument("--repo", default=".", help="target git repository")
     run.add_argument("--adapter", choices=["auto", "claude", "codex", "mock"], default="auto")

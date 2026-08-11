@@ -6,5 +6,12 @@ if [[ "${1:-}" == "doctor" ]]; then
   shift
   PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}" python3 -m morph doctor --repo "$REPO" "$@"
 else
-  PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}" python3 -m morph run --repo "$REPO" "$@"
+  # This wrapper already supplies the "run" subcommand. Tolerate the user
+  # typing it anyway: without this, "morph-once run <task>" parses the word
+  # "run" as the task and reports the real task as an unrecognized argument,
+  # and bare "morph-once run" silently starts a full real lifecycle whose
+  # task is the literal string "run".
+  if [[ "${1:-}" == "run" ]]; then shift; fi
+  PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}" MORPH_PROG="$(basename "${BASH_SOURCE[0]}")" \
+    python3 -m morph run --repo "$REPO" "$@"
 fi
