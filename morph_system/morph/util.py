@@ -138,6 +138,9 @@ def run_streamed(
     finally:
         if log_fh:
             log_fh.close()
+        if proc.stdout:
+            proc.stdout.close()
+        pump.join(timeout=1)
     stdout_text = "".join(lines)
     return CmdResult(args, proc.returncode, stdout_text, "", time.monotonic() - started)
 
@@ -209,7 +212,15 @@ def filter_ignored_status(status_text: str, ignore_paths: Iterable[str]) -> list
         path = line[3:] if len(line) >= 4 else line
         # Rename records can look like "old -> new"; compare both ends.
         paths = [x.strip() for x in path.split(" -> ")]
-        if ignore_paths and all(any(x == ig.rstrip("/") or x.startswith(ig) for ig in ignore_paths) for x in paths):
+        def is_ignored(candidate: str) -> bool:
+            return any(
+                candidate.startswith(ignored)
+                if ignored.endswith("/")
+                else candidate == ignored
+                for ignored in ignore_paths
+            )
+
+        if ignore_paths and all(is_ignored(x) for x in paths):
             continue
         dirty.append(line)
     return dirty
