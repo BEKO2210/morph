@@ -5,14 +5,14 @@
 <br/>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](morph_system/LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.7-informational.svg)](morph_system/VERSION)
+[![Version](https://img.shields.io/badge/version-0.1.8-informational.svg)](morph_system/VERSION)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#requirements)
 [![Architecture](https://img.shields.io/badge/architecture-one--shot%2C%20no%20daemon-success.svg)](#what-a-run-actually-does)
 [![Dependencies](https://img.shields.io/badge/python%20deps-zero-success.svg)](#requirements)
 
 **Code that heals before it breaks.**
 
-[Landing page](site/index.html)
+[Landing page](https://beko2210.github.io/morph/) · [source](site/index.html)
 
 </div>
 

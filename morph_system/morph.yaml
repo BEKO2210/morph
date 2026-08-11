@@ -32,7 +32,7 @@
   },
   "claude": {
     "model": "sonnet",
-    "max_turns": 18,
+    "max_turns": 40,
     "builder_allowed_tools": [
       "Read",
       "Edit",

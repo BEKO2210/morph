@@ -36,7 +36,7 @@ class MorphConfig:
     })
     claude: dict[str, Any] = field(default_factory=lambda: {
         "model": "sonnet",
-        "max_turns": 18,
+        "max_turns": 40,
         "builder_allowed_tools": ["Read", "Edit", "Write", "Glob", "Grep"],
         "review_allowed_tools": ["Read", "Glob", "Grep"],
     })

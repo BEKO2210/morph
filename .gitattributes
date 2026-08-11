@@ -1,0 +1,4 @@
+# site/index.html is a single self-contained artifact (fonts and hero
+# art inlined as base64) generated once, not hand-authored HTML — don't
+# let it dominate GitHub's "Languages" bar for what is a Python project.
+site/index.html linguist-generated=true
