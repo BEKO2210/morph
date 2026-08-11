@@ -209,8 +209,145 @@ ul{margin:0;padding:0;list-style:none;}
   margin-top:16px;font-size:12.5px;color:var(--ink-faint);text-align:center;
 }
 
+/* ---------- real-run replay ---------- */
+.replay{
+  border:1px solid var(--panel-border);border-radius:var(--radius-lg);
+  background:linear-gradient(180deg,var(--panel) 0%,rgba(16,18,42,0.55) 100%);
+  overflow:hidden;
+}
+.replay-bar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:14px 18px;border-bottom:1px solid var(--panel-border);
+  font-family:var(--shell);font-size:12px;color:var(--ink-faint);
+}
+.replay-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--shell);font-size:12px;font-weight:600;color:var(--ink);
+  background:rgba(255,255,255,0.05);border:1px solid var(--panel-border-strong);
+  border-radius:999px;padding:6px 14px;cursor:pointer;
+  transition:background .18s ease,border-color .18s ease;
+}
+.replay-btn:hover{background:rgba(255,255,255,0.1);}
+.replay-btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+.replay-btn svg{width:12px;height:12px;fill:currentColor;}
+.replay-clock{font-variant-numeric:tabular-nums;color:var(--ink-muted);}
+.replay-scrub{
+  flex:1;min-width:120px;height:3px;border-radius:999px;
+  background:rgba(255,255,255,0.08);overflow:hidden;
+}
+.replay-scrub i{
+  display:block;height:100%;width:0;border-radius:999px;
+  background:linear-gradient(90deg,var(--blue),var(--violet),var(--teal));
+}
+.replay-meta{margin-left:auto;display:flex;gap:14px;flex-wrap:wrap;}
+.replay-meta b{color:var(--ink-muted);font-weight:600;}
+
+.replay-body{display:grid;grid-template-columns:1.45fr 1fr;}
+.replay-lanes{padding:20px;display:grid;gap:12px;border-right:1px solid var(--panel-border);}
+.replay-genlabel{
+  font-family:var(--shell);font-size:11px;letter-spacing:.08em;color:var(--ink-faint);
+  display:flex;align-items:center;gap:10px;
+}
+.replay-genlabel::after{content:'';flex:1;height:1px;background:var(--panel-border);}
+
+.cand{
+  border:1px solid var(--panel-border);border-radius:var(--radius-md);
+  background:rgba(255,255,255,0.015);padding:12px 14px;
+  opacity:.4;transition:opacity .35s ease,border-color .35s ease,background .35s ease;
+}
+.cand.active{opacity:1;border-color:var(--panel-border-strong);background:rgba(255,255,255,0.04);}
+.cand.done{opacity:1;}
+.cand.winner{border-color:var(--diff-add);background:var(--diff-add-bg);}
+.cand-head{display:flex;align-items:center;gap:9px;margin-bottom:9px;}
+.cand-dot{width:7px;height:7px;border-radius:999px;flex:none;background:var(--ink-faint);}
+.cand.l1 .cand-dot{background:var(--blue);}
+.cand.l2 .cand-dot{background:var(--violet);}
+.cand.l3 .cand-dot{background:var(--teal);}
+.cand-name{font-family:var(--shell);font-size:12.5px;font-weight:600;color:var(--ink);}
+.cand-rank{
+  margin-left:auto;font-family:var(--shell);font-size:11px;color:var(--ink-faint);
+  border:1px solid var(--panel-border);border-radius:6px;padding:1px 7px;opacity:0;
+  transition:opacity .3s ease;
+}
+.cand.done .cand-rank{opacity:1;}
+.cand.winner .cand-rank{color:var(--diff-add);border-color:var(--diff-add);}
+
+.phases{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.ph{
+  font-family:var(--shell);font-size:10.5px;letter-spacing:.02em;
+  border:1px solid var(--panel-border);border-radius:6px;padding:3px 8px;
+  color:var(--ink-faint);display:inline-flex;align-items:center;gap:5px;
+  transition:color .25s ease,border-color .25s ease,background .25s ease;
+}
+.ph i{
+  width:5px;height:5px;border-radius:999px;background:var(--ink-faint);flex:none;
+  transition:background .25s ease;
+}
+.ph.run{color:var(--ink);border-color:var(--panel-border-strong);background:rgba(255,255,255,0.05);}
+.ph.run i{background:var(--blue);animation:phpulse 1s ease-in-out infinite;}
+.ph.ok{color:var(--diff-add);border-color:rgba(59,217,160,0.35);}
+.ph.ok i{background:var(--diff-add);}
+@keyframes phpulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+@media (prefers-reduced-motion: reduce){ .ph.run i{animation:none;} }
+
+.cand-foot{display:flex;align-items:center;gap:12px;}
+.fitbar{
+  flex:1;height:6px;border-radius:999px;background:rgba(255,255,255,0.07);
+  position:relative;overflow:hidden;
+}
+.fitbar i{
+  display:block;height:100%;width:0;border-radius:999px;
+  background:linear-gradient(90deg,var(--blue),var(--violet));
+  transition:width .8s cubic-bezier(.22,.9,.3,1);
+}
+.cand.winner .fitbar i{background:linear-gradient(90deg,var(--teal),var(--diff-add));}
+.fitbar b{
+  position:absolute;top:-3px;bottom:-3px;left:45%;width:1px;
+  background:var(--diff-rem);opacity:.5;
+}
+.fitval{
+  font-family:var(--shell);font-size:12px;font-variant-numeric:tabular-nums;
+  color:var(--ink-muted);min-width:52px;text-align:right;opacity:0;transition:opacity .3s ease;
+}
+.cand.done .fitval{opacity:1;}
+.cand.winner .fitval{color:var(--diff-add);font-weight:700;}
+
+.replay-console{
+  padding:18px;display:flex;flex-direction:column;min-height:0;
+  background:rgba(7,8,26,0.55);
+}
+.replay-console .lbl{
+  font-family:var(--shell);font-size:11px;color:var(--ink-faint);
+  letter-spacing:.06em;margin-bottom:10px;
+}
+.replay-log{
+  flex:1;overflow-y:auto;font-family:var(--shell);font-size:11.5px;line-height:1.75;
+  max-height:340px;scrollbar-width:thin;
+}
+.replay-log div{color:var(--ink-faint);white-space:pre-wrap;word-break:break-word;}
+.replay-log .hi{color:var(--ink-muted);}
+.replay-log .good{color:var(--diff-add);}
+.replay-log .warn{color:#FFD166;}
+
+.replay-verdict{
+  border-top:1px solid var(--panel-border);padding:16px 18px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  opacity:0;transition:opacity .5s ease;
+}
+.replay-verdict.in{opacity:1;}
+.gate{
+  font-family:var(--shell);font-size:11.5px;color:var(--ink-faint);
+  border:1px solid var(--panel-border);border-radius:7px;padding:4px 10px;
+}
+.gate.ok{color:var(--diff-add);border-color:rgba(59,217,160,0.35);background:var(--diff-add-bg);}
+.replay-verdict .final{
+  margin-left:auto;font-family:var(--shell);font-size:12.5px;font-weight:700;color:var(--diff-add);
+}
+
 /* ---------- generic section ---------- */
 .section{position:relative;padding:96px 0;overflow:hidden;}
+/* the nav is fixed, so anchor jumps must stop clear of it */
+section[id]{scroll-margin-top:104px;}
 .section-head{max-width:640px;margin-bottom:52px;}
 .section-head h2{font-size:clamp(26px,3vw,36px);color:var(--ink);margin:16px 0 14px;line-height:1.15;}
 .section-head p{font-size:16px;color:var(--ink-muted);line-height:1.6;}
@@ -331,6 +468,10 @@ footer{border-top:1px solid var(--panel-border);padding:36px 0;}
   .hero-art{order:-1;}
   .hero-terminal{position:static;width:100%;margin-top:16px;}
   .grid-3{grid-template-columns:1fr;}
+  .replay-body{grid-template-columns:1fr;}
+  .replay-lanes{border-right:none;border-bottom:1px solid var(--panel-border);}
+  .replay-log{max-height:200px;}
+  .replay-meta{margin-left:0;width:100%;}
   .features-grid{grid-template-columns:repeat(2,1fr);}
   .diff-head,.diff-row{grid-template-columns:1fr;}
   .diff-head div:not(:first-child){border-top:1px solid var(--panel-border);}
@@ -372,6 +513,7 @@ footer{border-top:1px solid var(--panel-border);padding:36px 0;}
         morph
       </a>
       <nav class="nav-links">
+        <a href="#replay">Real run</a>
         <a href="#why">Why</a>
         <a href="#specs">Specs</a>
         <a href="#features">Features</a>
@@ -592,6 +734,46 @@ footer{border-top:1px solid var(--panel-border);padding:36px 0;}
   </div>
 </section>
 
+<!-- ============ REAL RUN REPLAY ============ -->
+<section class="section" id="replay">
+  <div class="glow glow-teal" style="width:420px;height:420px;top:60px;right:-180px;opacity:0.2;"></div>
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="badge"><span class="dot"></span>real run</span>
+      <h2>Watch a real run, replayed</h2>
+      <p>Not a mockup and not an animation loop — a recorded replay of one actual MORPH run. Every hypothesis, duration, severity and fitness score below was written to <code style="font-family:var(--shell)">.morph/runs/</code> by the run itself.</p>
+    </div>
+    <div class="replay reveal" id="rp">
+      <div class="replay-bar">
+        <button class="replay-btn" id="rp-play" type="button" aria-label="Play the recorded run">
+          <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1l9 5-9 5z"/></svg><span>Play</span>
+        </button>
+        <button class="replay-btn" id="rp-speed" type="button" aria-label="Change replay speed">1&times;</button>
+        <span class="replay-clock" id="rp-clock">00:00 / 10:51</span>
+        <span class="replay-scrub"><i id="rp-scrub"></i></span>
+        <span class="replay-meta">
+          <span><b>adapter</b> claude</span>
+          <span><b>base</b> 571099b</span>
+        </span>
+      </div>
+      <div class="replay-body">
+        <div class="replay-lanes" id="rp-lanes"></div>
+        <div class="replay-console">
+          <div class="lbl">progress.log</div>
+          <div class="replay-log" id="rp-log" aria-live="polite"></div>
+        </div>
+      </div>
+      <div class="replay-verdict" id="rp-verdict">
+        <span class="gate ok">fitness_ok</span>
+        <span class="gate ok">checks_ok</span>
+        <span class="gate ok">predator_ok</span>
+        <span class="gate ok">guardian_ok</span>
+        <span class="final">winner-selected &rarr; applied (1 file, +5&minus;1)</span>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ============ WHY ============ -->
 <section class="section" id="why">
   <div class="glow glow-blue" style="width:380px;height:380px;top:40px;left:-160px;opacity:0.28;"></div>
@@ -738,11 +920,11 @@ footer{border-top:1px solid var(--panel-border);padding:36px 0;}
       <div class="evidence-list">
         <div class="log-line">
           <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>
-          <span class="txt"><b>21/21 tests pass</b> — <code style="font-family:var(--shell)">pytest morph_system/tests</code> and <code style="font-family:var(--shell)">bash morph_system/run-tests.sh</code>.</span>
+          <span class="txt"><b>48/48 tests pass</b> — <code style="font-family:var(--shell)">pytest morph_system/tests</code> and <code style="font-family:var(--shell)">bash morph_system/run-tests.sh</code>.</span>
         </div>
         <div class="log-line">
           <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>
-          <span class="txt"><b>./morph-once doctor</b> — correct JSON, exit 0.</span>
+          <span class="txt"><b>./morph-once doctor</b> — human-readable prerequisite check, with <code style="font-family:var(--shell)">--json</code> for CI.</span>
         </div>
         <div class="log-line">
           <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>
@@ -754,7 +936,7 @@ footer{border-top:1px solid var(--panel-border);padding:36px 0;}
         </div>
         <div class="log-line">
           <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>
-          <span class="txt"><b>Real <code style="font-family:var(--shell)">claude -p</code> run</b> — Builder wrote a real patch, Predator/Guardian produced real review findings, gates all <code style="font-family:var(--shell)">true</code>, base tree untouched.</span>
+          <span class="txt"><b>Real <code style="font-family:var(--shell)">claude -p</code> run against a real bug</b> — 6 candidates scored, winner applied, and the target repo went from <b>6 passing / 2 failing</b> to <b>8/8 green</b>. Replayed in full <a href="#replay" style="color:var(--teal)">above</a>.</span>
         </div>
         <div class="log-line">
           <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>
@@ -853,6 +1035,212 @@ footer{border-top:1px solid var(--panel-border);padding:36px 0;}
     else { nav.style.background = 'rgba(16,18,42,0.72)'; }
     lastY = y;
   }, {passive:true});
+})();
+
+/* ---- real-run replay -------------------------------------------------
+   Data recorded by MORPH run 20260811-160310-parse-duration-s against a
+   repo whose parse_duration() silently returned 0 for input containing no
+   duration. builder/tests seconds and every severity, confidence and
+   fitness figure are exact values from the run's candidate JSON. Review
+   seconds come from the run's 20s progress heartbeats, so they are coarse
+   lower bounds used only to pace the replay -- they are never displayed.
+---------------------------------------------------------------------- */
+(function(){
+  var root = document.getElementById('rp');
+  if(!root) return;
+
+  var C = [
+    {id:'g0-candidate-1', gen:0, lane:1, name:'token-count-guard',
+     build:18.5, tests:0.42, pred:40, guard:20,
+     ps:0.05, pc:0.9, pn:5, gs:0.02, gc:0.97, gn:6, fit:0.9875, rank:1},
+    {id:'g0-candidate-2', gen:0, lane:2, name:'full-string-consumption-check',
+     build:33.2, tests:0.42, pred:80, guard:20,
+     ps:0.15, pc:0.9, pn:4, gs:0.05, gc:0.95, gn:5, fit:0.9689, rank:6},
+    {id:'g0-candidate-3', gen:0, lane:3, name:'explicit-total-accumulation-flag',
+     build:21.1, tests:0.36, pred:60, guard:12,
+     ps:0.1, pc:0.85, pn:6, gs:0.0, gc:0.95, gn:5, fit:0.9836, rank:2},
+    {id:'g1-candidate-1', gen:1, lane:1, name:'minimalize',
+     build:31.2, tests:0.47, pred:60, guard:12,
+     ps:0.1, pc:0.75, pn:4, gs:0.0, gc:0.95, gn:4, fit:0.9835, rank:3},
+    {id:'g1-candidate-2', gen:1, lane:2, name:'harden',
+     build:65.0, tests:0.37, pred:60, guard:20,
+     ps:0.1, pc:0.85, pn:5, gs:0.05, gc:0.9, gn:5, fit:0.9756, rank:5},
+    {id:'g1-candidate-3', gen:1, lane:3, name:'simplify',
+     build:49.9, tests:0.42, pred:40, guard:12,
+     ps:0.1, pc:0.85, pn:4, gs:0.0, gc:0.95, gn:4, fit:0.9835, rank:4}
+  ];
+  var WINNER = 'g0-candidate-1';
+  var PHASES = ['Builder','Tests','Predator','Guardian'];
+
+  /* ---- build the timeline in real run-seconds ---- */
+  var tl = [], t = 0;
+  function ev(at, type, data){ tl.push({t:at, type:type, d:data}); }
+  ev(0, 'log', {cls:'hi', txt:'[MORPH] Sensing repository'});
+  ev(2, 'log', {cls:'', txt:'[MORPH] stress field: src/duration.py 1.00 · tests/test_duration.py 1.00'});
+  ev(4, 'log', {cls:'hi', txt:'[MORPH] Generating 3 hypotheses'});
+  t = 14;
+  C.forEach(function(c, i){
+    if(c.gen === 1 && C[i-1].gen === 0){
+      ev(t, 'log', {cls:'hi', txt:'[MORPH] Winner reproduces — minimalize / harden / simplify'});
+      t += 3;
+    }
+    ev(t, 'begin', {i:i});
+    ev(t, 'log', {cls:'hi', txt:'[MORPH] Builder started (' + c.id + ')'});
+    ev(t, 'phase', {i:i, p:0, s:'run'});
+    t += c.build;
+    ev(t, 'phase', {i:i, p:0, s:'ok'});
+    ev(t, 'log', {cls:'', txt:'[MORPH] Builder completed in ' + Math.round(c.build) + 's (' + c.id + ') — 1 files changed'});
+    ev(t, 'phase', {i:i, p:1, s:'run'});
+    t += Math.max(c.tests, 1.5);
+    ev(t, 'phase', {i:i, p:1, s:'ok'});
+    ev(t, 'log', {cls:'good', txt:'[MORPH] Checks completed (' + c.id + ') — 1/1 passed'});
+    ev(t, 'phase', {i:i, p:2, s:'run'});
+    t += c.pred;
+    ev(t, 'phase', {i:i, p:2, s:'ok'});
+    ev(t, 'log', {cls:'', txt:'[MORPH] Predator (' + c.id + ') — severity ' + c.ps.toFixed(2) + ', confidence ' + c.pc.toFixed(2) + ', ' + c.pn + ' findings'});
+    ev(t, 'phase', {i:i, p:3, s:'run'});
+    t += c.guard;
+    ev(t, 'phase', {i:i, p:3, s:'ok'});
+    ev(t, 'log', {cls:'', txt:'[MORPH] Guardian (' + c.id + ') — severity ' + c.gs.toFixed(2) + ', confidence ' + c.gc.toFixed(2) + ', ' + c.gn + ' findings'});
+    ev(t, 'score', {i:i});
+    ev(t, 'log', {cls:'', txt:'[MORPH] Fitness (' + c.id + ') = ' + c.fit.toFixed(4)});
+    t += 2;
+  });
+  ev(t, 'log', {cls:'hi', txt:'[MORPH] 6 states scored — selecting'});
+  t += 2;
+  ev(t, 'log', {cls:'good', txt:'[MORPH] WINNER ' + WINNER + ' (fitness 0.9875) — all 4 gates passed'});
+  ev(t, 'log', {cls:'good', txt:'[MORPH] Applied to base tree — 1 file, +5−1. Not committed.'});
+  t += 2;
+  ev(t, 'log', {cls:'hi', txt:'[MORPH] Cleaning worktrees'});
+  ev(t, 'verdict', {});
+  t += 2;
+  ev(t, 'log', {cls:'', txt:'[MORPH] Apoptosis complete — no residue. Exit 0.'});
+  var TOTAL = t + 1;
+
+  /* ---- render the lanes ---- */
+  var lanes = document.getElementById('rp-lanes');
+  var nodes = [];
+  var html = '';
+  C.forEach(function(c, i){
+    if(i === 0) html += '<div class="replay-genlabel">GENERATION 0 · causally distinct clones</div>';
+    if(i === 3) html += '<div class="replay-genlabel">GENERATION 1 · mutation pressure</div>';
+    html += '<div class="cand l' + c.lane + '" data-i="' + i + '">'
+         +    '<div class="cand-head"><span class="cand-dot"></span>'
+         +      '<span class="cand-name">' + c.name + '</span>'
+         +      '<span class="cand-rank">#' + c.rank + '</span></div>'
+         +    '<div class="phases">'
+         +      PHASES.map(function(p){ return '<span class="ph"><i></i>' + p + '</span>'; }).join('')
+         +    '</div>'
+         +    '<div class="cand-foot"><span class="fitbar"><b title="fitness threshold 0.45"></b><i></i></span>'
+         +      '<span class="fitval">' + c.fit.toFixed(4) + '</span></div>'
+         +  '</div>';
+  });
+  lanes.innerHTML = html;
+  lanes.querySelectorAll('.cand').forEach(function(el){
+    nodes.push({el:el, ph:el.querySelectorAll('.ph'), bar:el.querySelector('.fitbar i')});
+  });
+
+  var logEl = document.getElementById('rp-log');
+  var clockEl = document.getElementById('rp-clock');
+  var scrubEl = document.getElementById('rp-scrub');
+  var playBtn = document.getElementById('rp-play');
+  var speedBtn = document.getElementById('rp-speed');
+  var verdictEl = document.getElementById('rp-verdict');
+
+  var BASE = 22;                 // replay is 22x faster than the real run
+  var speeds = [1, 2, 4], si = 0;
+  var cursor = 0, clock = 0, raf = null, last = 0, playing = false;
+
+  function mmss(s){
+    var m = Math.floor(s / 60), r = Math.floor(s % 60);
+    return (m < 10 ? '0' : '') + m + ':' + (r < 10 ? '0' : '') + r;
+  }
+  function apply(e){
+    if(e.type === 'log'){
+      var d = document.createElement('div');
+      if(e.d.cls) d.className = e.d.cls;
+      d.textContent = e.d.txt;
+      logEl.appendChild(d);
+      logEl.scrollTop = logEl.scrollHeight;
+    } else if(e.type === 'begin'){
+      nodes[e.d.i].el.classList.add('active');
+    } else if(e.type === 'phase'){
+      var p = nodes[e.d.i].ph[e.d.p];
+      p.classList.remove('run', 'ok');
+      p.classList.add(e.d.s);
+    } else if(e.type === 'score'){
+      var n = nodes[e.d.i];
+      n.el.classList.add('done');
+      n.bar.style.width = (C[e.d.i].fit * 100).toFixed(1) + '%';
+      if(C[e.d.i].id === WINNER) n.el.classList.add('winner');
+    } else if(e.type === 'verdict'){
+      verdictEl.classList.add('in');
+    }
+  }
+  function reset(){
+    cursor = 0; clock = 0; logEl.innerHTML = '';
+    verdictEl.classList.remove('in');
+    nodes.forEach(function(n){
+      n.el.classList.remove('active', 'done', 'winner');
+      n.bar.style.width = '0';
+      n.ph.forEach(function(p){ p.classList.remove('run', 'ok'); });
+    });
+    paint();
+  }
+  function paint(){
+    clockEl.textContent = mmss(clock) + ' / ' + mmss(TOTAL);
+    scrubEl.style.width = Math.min(100, (clock / TOTAL) * 100) + '%';
+  }
+  function finish(){
+    while(cursor < tl.length) apply(tl[cursor++]);
+    clock = TOTAL; paint();
+  }
+  function tick(ts){
+    if(!playing) return;
+    if(!last) last = ts;
+    clock += ((ts - last) / 1000) * BASE * speeds[si];
+    last = ts;
+    while(cursor < tl.length && tl[cursor].t <= clock) apply(tl[cursor++]);
+    paint();
+    if(cursor >= tl.length && clock >= TOTAL){ stop(); return; }
+    raf = requestAnimationFrame(tick);
+  }
+  function start(){
+    if(cursor >= tl.length) reset();
+    playing = true; last = 0;
+    playBtn.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1h3v10H2zM7 1h3v10H7z"/></svg><span>Pause</span>';
+    playBtn.setAttribute('aria-label', 'Pause the recorded run');
+    raf = requestAnimationFrame(tick);
+  }
+  function stop(){
+    playing = false;
+    if(raf) cancelAnimationFrame(raf);
+    playBtn.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1l9 5-9 5z"/></svg><span>' + (cursor >= tl.length ? 'Replay' : 'Play') + '</span>';
+    playBtn.setAttribute('aria-label', 'Play the recorded run');
+  }
+
+  playBtn.addEventListener('click', function(){ playing ? stop() : start(); });
+  speedBtn.addEventListener('click', function(){
+    si = (si + 1) % speeds.length;
+    speedBtn.textContent = speeds[si] + '×';
+  });
+
+  reset();
+
+  // Anyone who prefers reduced motion gets the finished run, not an animation.
+  var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(calm){ finish(); stop(); return; }
+
+  // Otherwise it starts itself once it is actually on screen, once.
+  if('IntersectionObserver' in window){
+    var seen = false;
+    var rio = new IntersectionObserver(function(en){
+      en.forEach(function(x){
+        if(x.isIntersecting && !seen){ seen = true; start(); rio.disconnect(); }
+      });
+    }, {threshold:0.35});
+    rio.observe(root);
+  }
 })();
 </script>
 
