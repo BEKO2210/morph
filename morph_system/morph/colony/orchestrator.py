@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 import time
 import traceback
 from dataclasses import dataclass
@@ -16,6 +15,7 @@ from ..core.graph import build_lightweight_graph, stress_field
 from ..core.homeostasis import sense
 from ..git.worktrees import WorktreeManager, Worktree
 from ..memory.store import MemoryStore
+from ..ui import make_reporter
 from ..util import filter_ignored_status, json_dump, run_cmd, slug
 from .hypotheses import generate, Hypothesis
 from .roles import builder, predator, guardian, Review
@@ -47,20 +47,6 @@ class Candidate:
     patch: str
     generation: int = 0
     status: str = "scored"  # "scored" | "builder-no-change"
-
-
-def _make_reporter(run_dir: Path) -> Callable[[str], None]:
-    log_path = run_dir / "progress.log"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-
-    def report(msg: str) -> None:
-        # stdout is reserved for the final JSON result (scripts/CI parse it
-        # directly); all human progress output goes to stderr + the log.
-        print(f"[MORPH] {msg}", file=sys.stderr, flush=True)
-        with open(log_path, "a", encoding="utf-8") as fh:
-            fh.write(f"[MORPH] {msg}\n")
-
-    return report
 
 
 def _apply_patch_without_corrupting_tree(repo: Path, patch_path: Path) -> None:
@@ -235,7 +221,7 @@ def run_once(
     run_id = time.strftime("%Y%m%d-%H%M%S") + "-" + slug(task, 16)
     run_dir = repo / ".morph" / "runs" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
-    report = _make_reporter(run_dir)
+    report = make_reporter(run_dir)
     memory = MemoryStore(repo)
     manager = WorktreeManager(repo, run_id)
 

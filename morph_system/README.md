@@ -67,6 +67,8 @@ MORPH requires a clean base working tree for apply/commit/push. That is delibera
 
 Every run prints `[MORPH] ...` progress lines (sensing, hypothesis generation, Builder start/done with duration and changed-file count, each check command, Predator/Guardian start/done, cleanup) to **stderr** and appends them to `run_dir/progress.log`, so a run is never silently stuck for minutes. **stdout carries only the final JSON result** — safe to pipe into `jq` or any script. Pass `--verbose`/`-v` to additionally echo raw agent/check stdout+stderr live (also on stderr); it is always teed to per-candidate `.builder.log` / `.predator.log` / `.guardian.log` files regardless of `--verbose`.
 
+When stderr is a real terminal, progress lines are colorized by kind (started = blue, completed/applied = green, still-running/retrying = yellow with a spinner that updates in place instead of spamming new lines, failed = red) — pure ANSI escapes, no dependency added. Falls back to plain text automatically when stderr isn't a TTY (piped, redirected, CI), and always respects `NO_COLOR`. `MORPH_FORCE_COLOR=1` forces it on regardless of TTY detection (e.g. when piping through something that preserves color); `MORPH_NO_COLOR=1` forces it off. `progress.log` on disk is always plain text either way.
+
 ## Resilience
 
 - **Transient network errors** (dropped websocket, connection reset, HTTP 5xx) during a Builder/Predator/Guardian call are retried with exponential backoff — `agent_max_retries` (default 2) and `agent_retry_backoff_s` (default 5.0) in `morph.yaml`. Normal agent/task failures (a bad prompt, a real bug) are never retried.
