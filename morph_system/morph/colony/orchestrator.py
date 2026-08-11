@@ -63,6 +63,25 @@ def _make_reporter(run_dir: Path) -> Callable[[str], None]:
     return report
 
 
+def _apply_patch_without_corrupting_tree(repo: Path, patch_path: Path) -> None:
+    """Apply ``patch_path`` to ``repo``'s working tree without ever leaving
+    it half-mutated. `git apply --3way` can partially rewrite files even
+    when it ultimately fails (it merges whatever hunks cleanly 3-way-merge,
+    then reports failure only for the rest); immediately retrying with a
+    plain `git apply` against that already-mutated tree can corrupt it
+    further, including making tracked files look deleted. `--check` is a
+    dry run that never touches the working tree, so verify each strategy
+    with it first and only ever perform one real (non-check) apply."""
+    for extra in (["--3way"], []):
+        check = run_cmd(["git", "apply", "--check", *extra, str(patch_path)], cwd=repo)
+        if check.returncode == 0:
+            r = run_cmd(["git", "apply", *extra, str(patch_path)], cwd=repo)
+            if r.returncode != 0:
+                raise RuntimeError(f"Winner patch passed --check but failed to apply: {r.stderr}")
+            return
+    raise RuntimeError("Winner selected but patch could not be applied cleanly (checked --3way and plain apply without touching the working tree).")
+
+
 def _repo_summary(repo: Path) -> str:
     top = run_cmd(["git", "ls-files"], cwd=repo).stdout.splitlines()[:180]
     return "Tracked files (sample):\n" + "\n".join(top)
@@ -342,11 +361,7 @@ def run_once(
             if apply and status == "winner-selected" and winner.patch.strip():
                 if run_cmd(["git", "rev-parse", "HEAD"], cwd=repo).stdout.strip() != base:
                     raise RuntimeError("Base branch moved during MORPH run; refusing to apply stale winner patch.")
-                r = run_cmd(["git", "apply", "--3way", str(winner_patch)], cwd=repo)
-                if r.returncode != 0:
-                    r = run_cmd(["git", "apply", str(winner_patch)], cwd=repo)
-                if r.returncode != 0:
-                    raise RuntimeError(f"Winner selected but patch could not be applied: {r.stderr}")
+                _apply_patch_without_corrupting_tree(repo, winner_patch)
                 applied = True
                 report(f"Applied winner patch — {len(winner.changed_files)} files")
                 if commit:
