@@ -12,6 +12,8 @@
 
 **Code that heals before it breaks.**
 
+[Landing page](site/index.html)
+
 </div>
 
 ---
