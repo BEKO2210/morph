@@ -27,6 +27,29 @@ class CandidateAborted(Exception):
     this is raised; the caller just needs to skip this hypothesis."""
 
 
+def _apply_winner_patch(repo: Path, patch_file: Path) -> None:
+    """Apply a winner without letting a failed strategy dirty the base tree."""
+    attempts = (
+        ["git", "apply"],
+        ["git", "apply", "--3way"],
+    )
+    check_errors: list[str] = []
+    for command in attempts:
+        check = run_cmd([*command, "--check", str(patch_file)], cwd=repo)
+        if check.returncode != 0:
+            check_errors.append(check.stderr.strip())
+            continue
+        applied = run_cmd([*command, str(patch_file)], cwd=repo)
+        if applied.returncode != 0:
+            raise RuntimeError(
+                "Winner patch passed preflight but failed while applying: "
+                f"{applied.stderr}"
+            )
+        return
+    detail = "\n".join(error for error in check_errors if error)
+    raise RuntimeError(f"Winner selected but patch could not be applied: {detail}")
+
+
 ZERO_FITNESS_INPUTS = FitnessInputs(
     tests_ratio=0.0, predator_score=0.0, guardian_score=0.0,
     minimality=0.0, dependency_stability=0.0, blast_radius=0.0, task_signal=0.0,
@@ -47,25 +70,6 @@ class Candidate:
     patch: str
     generation: int = 0
     status: str = "scored"  # "scored" | "builder-no-change"
-
-
-def _apply_patch_without_corrupting_tree(repo: Path, patch_path: Path) -> None:
-    """Apply ``patch_path`` to ``repo``'s working tree without ever leaving
-    it half-mutated. `git apply --3way` can partially rewrite files even
-    when it ultimately fails (it merges whatever hunks cleanly 3-way-merge,
-    then reports failure only for the rest); immediately retrying with a
-    plain `git apply` against that already-mutated tree can corrupt it
-    further, including making tracked files look deleted. `--check` is a
-    dry run that never touches the working tree, so verify each strategy
-    with it first and only ever perform one real (non-check) apply."""
-    for extra in (["--3way"], []):
-        check = run_cmd(["git", "apply", "--check", *extra, str(patch_path)], cwd=repo)
-        if check.returncode == 0:
-            r = run_cmd(["git", "apply", *extra, str(patch_path)], cwd=repo)
-            if r.returncode != 0:
-                raise RuntimeError(f"Winner patch passed --check but failed to apply: {r.stderr}")
-            return
-    raise RuntimeError("Winner selected but patch could not be applied cleanly (checked --3way and plain apply without touching the working tree).")
 
 
 def _repo_summary(repo: Path) -> str:
@@ -347,7 +351,7 @@ def run_once(
             if apply and status == "winner-selected" and winner.patch.strip():
                 if run_cmd(["git", "rev-parse", "HEAD"], cwd=repo).stdout.strip() != base:
                     raise RuntimeError("Base branch moved during MORPH run; refusing to apply stale winner patch.")
-                _apply_patch_without_corrupting_tree(repo, winner_patch)
+                _apply_winner_patch(repo, winner_patch)
                 applied = True
                 report(f"Applied winner patch — {len(winner.changed_files)} files")
                 if commit:

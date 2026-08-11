@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from morph.colony.orchestrator import _apply_patch_without_corrupting_tree
+from morph.colony.orchestrator import _apply_winner_patch
 
 
 def _run(args, cwd):
@@ -29,7 +29,7 @@ class ApplySafety(unittest.TestCase):
             patch_path = repo / "winner.patch"
             patch_path.write_text(patch, encoding="utf-8")
 
-            _apply_patch_without_corrupting_tree(repo, patch_path)
+            _apply_winner_patch(repo, patch_path)
 
             self.assertEqual((repo / "hello.txt").read_text(encoding="utf-8"), "line1\nCHANGED\nline3\n")
 
@@ -57,7 +57,7 @@ class ApplySafety(unittest.TestCase):
             status_before = subprocess.run(["git", "status", "--porcelain"], cwd=repo, capture_output=True, text=True, check=True).stdout
 
             with self.assertRaises(RuntimeError):
-                _apply_patch_without_corrupting_tree(repo, patch_path)
+                _apply_winner_patch(repo, patch_path)
 
             after = (repo / "hello.txt").read_text(encoding="utf-8")
             status_after = subprocess.run(["git", "status", "--porcelain"], cwd=repo, capture_output=True, text=True, check=True).stdout
@@ -93,7 +93,7 @@ class ApplySafety(unittest.TestCase):
             _run(["git", "add", "."], repo)
             _run(["git", "-c", "user.name=T", "-c", "user.email=t@x", "commit", "-qm", "unrelated"], repo)
 
-            _apply_patch_without_corrupting_tree(repo, patch_path)
+            _apply_winner_patch(repo, patch_path)
 
             result = (repo / "hello.txt").read_text(encoding="utf-8")
             self.assertIn("line5-CHANGED", result)

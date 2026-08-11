@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from morph.adapters.base import AgentAdapter
-from morph.colony.orchestrator import run_once
+from morph.colony.orchestrator import _apply_winner_patch, run_once
 from morph.config import MorphConfig
 
 
@@ -69,6 +69,53 @@ class NoChangeAdapter(AgentAdapter):
 
 
 class OrchestratorResilience(unittest.TestCase):
+    def test_patch_apply_preflights_before_mutating_base_tree(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            patch_file = repo / "winner.patch"
+            patch_file.write_text("not a patch\n", encoding="utf-8")
+
+            with patch("morph.colony.orchestrator.run_cmd") as run:
+                run.side_effect = [
+                    subprocess.CompletedProcess([], 1, "", "plain rejected"),
+                    subprocess.CompletedProcess([], 1, "", "three-way rejected"),
+                ]
+                with self.assertRaisesRegex(RuntimeError, "could not be applied"):
+                    _apply_winner_patch(repo, patch_file)
+
+            commands = [call.args[0] for call in run.call_args_list]
+            self.assertEqual(
+                commands,
+                [
+                    ["git", "apply", "--check", str(patch_file)],
+                    ["git", "apply", "--3way", "--check", str(patch_file)],
+                ],
+            )
+
+    def test_patch_apply_uses_three_way_fallback_only_after_successful_preflight(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            patch_file = repo / "winner.patch"
+            patch_file.write_text("patch\n", encoding="utf-8")
+
+            with patch("morph.colony.orchestrator.run_cmd") as run:
+                run.side_effect = [
+                    subprocess.CompletedProcess([], 1, "", "plain rejected"),
+                    subprocess.CompletedProcess([], 0, "", ""),
+                    subprocess.CompletedProcess([], 0, "", ""),
+                ]
+                _apply_winner_patch(repo, patch_file)
+
+            commands = [call.args[0] for call in run.call_args_list]
+            self.assertEqual(
+                commands,
+                [
+                    ["git", "apply", "--check", str(patch_file)],
+                    ["git", "apply", "--3way", "--check", str(patch_file)],
+                    ["git", "apply", "--3way", str(patch_file)],
+                ],
+            )
+
     def test_persistent_review_failure_degrades_candidate_without_crashing_run(self):
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)

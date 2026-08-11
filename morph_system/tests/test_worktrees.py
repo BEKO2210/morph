@@ -33,6 +33,8 @@ class WorktreeDependencyInheritance(unittest.TestCase):
                 marker = wt.path / "node_modules" / "some-dep.js"
                 self.assertTrue(marker.exists(), "node_modules was not inherited into the new worktree")
                 self.assertEqual(marker.read_text(encoding="utf-8"), "module.exports = {};\n")
+                self.assertEqual(manager.changed_files(wt), [])
+                self.assertEqual(manager.patch(wt), "")
             finally:
                 manager.cleanup_all()
 

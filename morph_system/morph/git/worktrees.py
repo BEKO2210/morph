@@ -52,7 +52,14 @@ class WorktreeManager:
 
     def _intent_to_add_untracked(self, wt: Worktree) -> None:
         # Make untracked Builder output visible to `git diff` without committing it.
-        run_cmd(["git", "add", "-N", "."], cwd=wt.path)
+        # Dependency directories inherited by MORPH are symlinks, so ignore
+        # patterns ending in "/" do not match them as directories. Explicit
+        # negative pathspecs keep MORPH's own scaffolding out of candidate
+        # patches while still exposing every Builder-created file.
+        run_cmd([
+            "git", "add", "-N", "--", ".",
+            ":(exclude)node_modules", ":(exclude).venv", ":(exclude)venv",
+        ], cwd=wt.path)
 
     def patch(self, wt: Worktree) -> str:
         self._intent_to_add_untracked(wt)
