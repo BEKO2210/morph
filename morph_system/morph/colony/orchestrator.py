@@ -30,8 +30,8 @@ class CandidateAborted(Exception):
 def _apply_winner_patch(repo: Path, patch_file: Path) -> None:
     """Apply a winner without letting a failed strategy dirty the base tree."""
     attempts = (
-        ["git", "apply", "--3way"],
         ["git", "apply"],
+        ["git", "apply", "--3way"],
     )
     check_errors: list[str] = []
     for command in attempts:

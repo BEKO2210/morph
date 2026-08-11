@@ -77,8 +77,8 @@ class OrchestratorResilience(unittest.TestCase):
 
             with patch("morph.colony.orchestrator.run_cmd") as run:
                 run.side_effect = [
-                    subprocess.CompletedProcess([], 1, "", "three-way rejected"),
                     subprocess.CompletedProcess([], 1, "", "plain rejected"),
+                    subprocess.CompletedProcess([], 1, "", "three-way rejected"),
                 ]
                 with self.assertRaisesRegex(RuntimeError, "could not be applied"):
                     _apply_winner_patch(repo, patch_file)
@@ -87,12 +87,12 @@ class OrchestratorResilience(unittest.TestCase):
             self.assertEqual(
                 commands,
                 [
-                    ["git", "apply", "--3way", "--check", str(patch_file)],
                     ["git", "apply", "--check", str(patch_file)],
+                    ["git", "apply", "--3way", "--check", str(patch_file)],
                 ],
             )
 
-    def test_patch_apply_uses_plain_fallback_only_after_successful_preflight(self):
+    def test_patch_apply_uses_three_way_fallback_only_after_successful_preflight(self):
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             patch_file = repo / "winner.patch"
@@ -100,7 +100,7 @@ class OrchestratorResilience(unittest.TestCase):
 
             with patch("morph.colony.orchestrator.run_cmd") as run:
                 run.side_effect = [
-                    subprocess.CompletedProcess([], 1, "", "three-way rejected"),
+                    subprocess.CompletedProcess([], 1, "", "plain rejected"),
                     subprocess.CompletedProcess([], 0, "", ""),
                     subprocess.CompletedProcess([], 0, "", ""),
                 ]
@@ -110,9 +110,9 @@ class OrchestratorResilience(unittest.TestCase):
             self.assertEqual(
                 commands,
                 [
-                    ["git", "apply", "--3way", "--check", str(patch_file)],
                     ["git", "apply", "--check", str(patch_file)],
-                    ["git", "apply", str(patch_file)],
+                    ["git", "apply", "--3way", "--check", str(patch_file)],
+                    ["git", "apply", "--3way", str(patch_file)],
                 ],
             )
 
