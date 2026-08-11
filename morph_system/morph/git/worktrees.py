@@ -29,7 +29,26 @@ class WorktreeManager:
         run_cmd(["git", "worktree", "add", "-q", "-b", branch, str(path), base], cwd=self.repo, check=True)
         wt = Worktree(safe, path, branch, base)
         self.created.append(wt)
+        self._inherit_dependency_dirs(wt)
         return wt
+
+    def _inherit_dependency_dirs(self, wt: Worktree) -> None:
+        # `git worktree add` only ever checks out tracked files. Dependency
+        # directories (node_modules, .venv, ...) are gitignored, so a fresh
+        # worktree starts without them — any check command that needs them
+        # (npm run lint/build, pytest against an installed venv, ...) would
+        # fail with "command not found" regardless of how correct the
+        # candidate's patch is. Symlink them in from the base repo instead
+        # of reinstalling per candidate: fast, and dependencies aren't
+        # expected to change within a single MORPH run.
+        for dirname in ("node_modules", ".venv", "venv"):
+            src = self.repo / dirname
+            dst = wt.path / dirname
+            if src.is_dir() and not dst.exists():
+                try:
+                    dst.symlink_to(src, target_is_directory=True)
+                except OSError:
+                    pass
 
     def _intent_to_add_untracked(self, wt: Worktree) -> None:
         # Make untracked Builder output visible to `git diff` without committing it.

@@ -5,7 +5,7 @@
 <br/>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](morph_system/LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.2-informational.svg)](morph_system/VERSION)
+[![Version](https://img.shields.io/badge/version-0.1.3-informational.svg)](morph_system/VERSION)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#requirements)
 [![Architecture](https://img.shields.io/badge/architecture-one--shot%2C%20no%20daemon-success.svg)](#what-a-run-actually-does)
 [![Dependencies](https://img.shields.io/badge/python%20deps-zero-success.svg)](#requirements)
@@ -238,10 +238,17 @@ Vendor release checksum (v0.1.1 ZIP as shipped): `ae967daca0518ddddf0be7c033c8a5
 > 6. An empty Builder diff was silently reviewed and fitness-scored like a normal candidate. Fixed: it's now journaled as an explicit `"status": "builder-no-change"` and excluded from review and winner/parent selection.
 > 7. `sensing.json`'s `git_clean` could read `0.0` (dirty) even when only MORPH's own untracked artifacts (`.morph/`, `morph.yaml`, ...) were present — `homeostasis.sense()` now filters `git status --porcelain` through the same `ignore_paths` the apply-safety check already used.
 >
-> Issues 2–7 were found via a real end-to-end MORPH run against an external target repository (codex 0.147.0); issue 1 against this environment's real `claude` CLI. 12 new regression tests cover all of them — 17 tests total (`pytest morph_system/tests`, `bash morph_system/run-tests.sh`).
+> Issues 2–7 were found via a real end-to-end MORPH run against an external target repository (codex 0.147.0); issue 1 against this environment's real `claude` CLI. 12 new regression tests cover all of them.
+>
+> **v0.1.3, found via a second real end-to-end run (autonomous, then a manual worktree audit):**
+> 8. `filter_ignored_status`'s file-pattern matching used `startswith`, so an ignore_paths entry like `"morph.yaml"` (no trailing slash, meant as an exact filename) also incorrectly matched unrelated project files sharing that prefix, e.g. `morph.yaml.backup`. Fixed to require exact equality for non-directory patterns; only `"..."/ "`-suffixed directory patterns still use prefix matching.
+> 9. `run_streamed` never closed the subprocess's `stdout` pipe, leaking a file descriptor (and a `ResourceWarning`) per agent/check call. Fixed with an explicit `close()` in the `finally` block.
+> 10. **Candidate worktrees had no `node_modules`/`.venv`.** `git worktree add` only checks out tracked files, so a fresh candidate clone for a Node/Python project starts without its installed dependencies — any check command that needs them (`npm run lint`, `npm run build`, ...) would fail with "command not found" regardless of how correct the patch is, unless the Builder happened to install something itself as a side effect (which is what silently saved the very first real run below). `WorktreeManager.create()` now symlinks `node_modules`/`.venv`/`venv` in from the base repo when present.
+>
+> 21 tests total (`pytest morph_system/tests`, `bash morph_system/run-tests.sh`).
 
 **End-to-end verification performed in this repo:**
-- All 17 tests pass.
+- All 21 tests pass.
 - `./morph-once doctor` — correct JSON, exit 0.
 - Full mock-adapter lifecycle (`--adapter mock`) — winner selected, all gates `true`, no residue after apoptosis.
 - Hard safety gate — a deliberately failing test command produced `checks_ok: false`, `status: no-winner-verification-failed`, `applied: false`, exit code 3.
