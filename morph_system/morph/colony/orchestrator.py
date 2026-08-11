@@ -27,6 +27,29 @@ class CandidateAborted(Exception):
     this is raised; the caller just needs to skip this hypothesis."""
 
 
+def _apply_winner_patch(repo: Path, patch_file: Path) -> None:
+    """Apply a winner without letting a failed strategy dirty the base tree."""
+    attempts = (
+        ["git", "apply", "--3way"],
+        ["git", "apply"],
+    )
+    check_errors: list[str] = []
+    for command in attempts:
+        check = run_cmd([*command, "--check", str(patch_file)], cwd=repo)
+        if check.returncode != 0:
+            check_errors.append(check.stderr.strip())
+            continue
+        applied = run_cmd([*command, str(patch_file)], cwd=repo)
+        if applied.returncode != 0:
+            raise RuntimeError(
+                "Winner patch passed preflight but failed while applying: "
+                f"{applied.stderr}"
+            )
+        return
+    detail = "\n".join(error for error in check_errors if error)
+    raise RuntimeError(f"Winner selected but patch could not be applied: {detail}")
+
+
 ZERO_FITNESS_INPUTS = FitnessInputs(
     tests_ratio=0.0, predator_score=0.0, guardian_score=0.0,
     minimality=0.0, dependency_stability=0.0, blast_radius=0.0, task_signal=0.0,
@@ -342,11 +365,7 @@ def run_once(
             if apply and status == "winner-selected" and winner.patch.strip():
                 if run_cmd(["git", "rev-parse", "HEAD"], cwd=repo).stdout.strip() != base:
                     raise RuntimeError("Base branch moved during MORPH run; refusing to apply stale winner patch.")
-                r = run_cmd(["git", "apply", "--3way", str(winner_patch)], cwd=repo)
-                if r.returncode != 0:
-                    r = run_cmd(["git", "apply", str(winner_patch)], cwd=repo)
-                if r.returncode != 0:
-                    raise RuntimeError(f"Winner selected but patch could not be applied: {r.stderr}")
+                _apply_winner_patch(repo, winner_patch)
                 applied = True
                 report(f"Applied winner patch — {len(winner.changed_files)} files")
                 if commit:
