@@ -138,6 +138,9 @@ def run_streamed(
     finally:
         if log_fh:
             log_fh.close()
+        if proc.stdout:
+            proc.stdout.close()
+        pump.join(timeout=1)
     stdout_text = "".join(lines)
     return CmdResult(args, proc.returncode, stdout_text, "", time.monotonic() - started)
 

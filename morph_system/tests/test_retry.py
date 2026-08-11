@@ -1,12 +1,29 @@
+import gc
 import tempfile
 import unittest
+import warnings
 from pathlib import Path
 from unittest.mock import patch
 
-from morph.util import run_agent
+from morph.util import run_agent, run_streamed
 
 
 class RetryOnTransientErrors(unittest.TestCase):
+    def test_streamed_process_closes_stdout_pipe(self):
+        with tempfile.TemporaryDirectory() as td, warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", ResourceWarning)
+            result = run_streamed(
+                ["bash", "-c", "echo ok"],
+                cwd=Path(td),
+                timeout=5,
+                heartbeat_s=5,
+            )
+            gc.collect()
+
+        self.assertEqual(result.returncode, 0)
+        resource_warnings = [warning for warning in caught if issubclass(warning.category, ResourceWarning)]
+        self.assertEqual(resource_warnings, [])
+
     def test_transient_error_is_retried_a_bounded_number_of_times(self):
         with tempfile.TemporaryDirectory() as td:
             counter = Path(td) / "attempts"
