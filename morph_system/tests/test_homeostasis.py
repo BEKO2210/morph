@@ -36,6 +36,14 @@ class Homeostasis(unittest.TestCase):
             dirty = sense(repo, ignore_paths=IGNORE_PATHS)
             self.assertEqual(dirty.git_clean, 0.0)
 
+    def test_file_ignore_does_not_hide_similarly_prefixed_project_file(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo = self._repo(td)
+            (repo / "morph.yaml.backup").write_text("project data\n", encoding="utf-8")
+
+            dirty = sense(repo, ignore_paths=IGNORE_PATHS)
+            self.assertEqual(dirty.git_clean, 0.0)
+
     def test_without_ignore_paths_own_artifacts_still_count_dirty(self):
         # Sanity check that the fix is the ignore_paths filtering itself,
         # not some unrelated change to how status is read.
