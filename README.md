@@ -5,7 +5,7 @@
 <br/>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](morph_system/LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.8-informational.svg)](morph_system/VERSION)
+[![Version](https://img.shields.io/badge/version-0.1.9-informational.svg)](morph_system/VERSION)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#requirements)
 [![Architecture](https://img.shields.io/badge/architecture-one--shot%2C%20no%20daemon-success.svg)](#what-a-run-actually-does)
 [![Dependencies](https://img.shields.io/badge/python%20deps-zero-success.svg)](#requirements)
@@ -248,6 +248,10 @@ Vendor release checksum (v0.1.1 ZIP as shipped): `ae967daca0518ddddf0be7c033c8a5
 > 10. **Candidate worktrees had no `node_modules`/`.venv`.** `git worktree add` only checks out tracked files, so a fresh candidate clone for a Node/Python project starts without its installed dependencies — any check command that needs them (`npm run lint`, `npm run build`, ...) would fail with "command not found" regardless of how correct the patch is, unless the Builder happened to install something itself as a side effect (which is what silently saved the very first real run below). `WorktreeManager.create()` now symlinks `node_modules`/`.venv`/`venv` in from the base repo when present.
 >
 > 21 tests total (`pytest morph_system/tests`, `bash morph_system/run-tests.sh`).
+
+> **v0.1.9, landing page fixes found via a real phone screenshot:**
+> 11. The "what a run actually does" section on the landing page was a flat 5-card list — it didn't actually show the fan-out into 3 causally-distinct clones, the mutation-and-rebattle step, or the 6-state scoring gate the README describes. Replaced with a real SVG pipeline diagram (`site/index.html`) tracing Task → Sensing → 3 clones (Builder → Tests → Predator → Guardian each) → Fitness Selection → Reproduce (minimalize/harden/simplify) → battle again → 6 states scored → Winner → 4 artifacts → Apoptosis → Exit.
+> 12. Decorative `.glow` background blobs use negative offsets (`left:-160px`, `right:-140px`) to bleed off the edge of their section, but the generic `.section` class had no `overflow:hidden` (only `.hero` did) — combined with `overflow-x:hidden` set on `body` but not `html`, the page could pan horizontally on mobile, revealing unstyled space past the site's right edge. Found via a live screenshot on a phone against the deployed page. Fixed both: `overflow:hidden` added to `.section`, `overflow-x:hidden` plus an explicit background added to `html`.
 
 **End-to-end verification performed in this repo:**
 - All 21 tests pass.
